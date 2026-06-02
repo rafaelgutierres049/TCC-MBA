@@ -36,7 +36,7 @@ def build_graph():
     """
     graph = StateGraph(AgenticMLState)
 
-    # Registra os nós
+    # Registrar os nós
     graph.add_node("agent1", run_agent1)
     graph.add_node("agent2", run_agent2)
     graph.add_node("agent3", run_agent3)
@@ -60,7 +60,7 @@ def build_graph():
     graph.add_conditional_edges(
         "agent4", _route, {"continue": "agent5", "agent6": "agent6"}
     )
-    # Agent5 sempre vai para Agent6 (erro ou caminho feliz, spec 7.1 e 7.2)
+    # Agent5 sempre vai para Agent6 
     graph.add_edge("agent5", "agent6")
     graph.add_edge("agent6", END)
 

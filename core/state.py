@@ -25,7 +25,7 @@ class AgenticMLState(TypedDict):
 
     # --- Controle de fluxo ---
     status: str        # "running" | "error" | "done"
-    error: dict | None # preenchido no curto-circuito (spec 7.2)
+    error: dict | None 
     failed_at: str | None  # nome do agente que falhou
 
 

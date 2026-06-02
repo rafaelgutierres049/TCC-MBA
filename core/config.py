@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     MAX_ROWS_PREVIEW: int = 10_000
 
     # --- LLM runtime ---
-    LLM_TEMPERATURE: float = 0.0   # 0.0 para reprodutibilidade acadêmica
+    LLM_TEMPERATURE: float = 0.0 
     LLM_MAX_TOKENS: int = 4096
 
     @property
