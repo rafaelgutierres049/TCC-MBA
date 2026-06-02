@@ -1,0 +1,40 @@
+# AgenticML — Dependências
+# Python 3.11+
+
+# --- Orquestração de Agentes ---
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langchain-anthropic>=0.2.0
+
+# --- API ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.12
+
+# --- Dados e ML ---
+pandas>=2.2.0
+numpy>=1.26.0
+scikit-learn>=1.5.0
+joblib>=1.4.0
+xgboost>=2.1.0
+imbalanced-learn>=0.12.0
+
+# --- Leitura de arquivos ---
+openpyxl>=3.1.0
+xlrd>=2.0.1
+chardet>=5.2.0
+
+# --- Configuração ---
+python-dotenv>=1.0.0
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+
+# --- Notebooks (reprodutibilidade) ---
+jupyterlab>=4.2.0
+ipykernel>=6.29.0
+matplotlib>=3.9.0
+seaborn>=0.13.0
+
+# --- Baseline de comparação (Linux only, instalar separadamente) ---
+# auto-sklearn>=0.15.0

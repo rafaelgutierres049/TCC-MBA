@@ -1,0 +1,30 @@
+# Ambiente virtual
+.venv/
+
+# Variáveis de ambiente (chaves de API)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# macOS
+.DS_Store
+
+# Modelos e artefatos grandes
+*.joblib
+*.pkl
+*.pickle
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
