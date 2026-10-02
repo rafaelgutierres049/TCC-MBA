@@ -47,7 +47,7 @@ def build_graph():
     # Ponto de entrada
     graph.set_entry_point("agent1")
 
-    # Arestas condicionais: erro → agent6 (curto-circuito), sucesso → próximo
+    # Arestas condicionais: erro -> agent6 (curto-circuito), sucesso -> próximo
     graph.add_conditional_edges(
         "agent1", _route, {"continue": "agent2", "agent6": "agent6"}
     )

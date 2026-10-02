@@ -32,6 +32,14 @@ async def analyze(
         None,
         description="Sugestão de tipo de problema: classification | regression | clustering | time_series | anomaly_detection",
     ),
+    random_state: int = Form(
+        42,
+        description="Semente de aleatoriedade para reprodutibilidade (padrão: 42).",
+    ),
+    balance_strategy: str = Form(
+        "auto",
+        description="Tratamento de desbalanceamento de classes: auto | none | class_weight (padrão: auto).",
+    ),
 ) -> JSONResponse:
     """
     Recebe o dataset e o prompt do usuário, executa o pipeline de 6 agentes
@@ -54,6 +62,12 @@ async def analyze(
             detail=f"Tipo de problema inválido: '{problem_type}'. Opções: {', '.join(ALLOWED_PROBLEM_TYPES)}.",
         )
 
+    if balance_strategy not in {"auto", "none", "class_weight"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"balance_strategy inválido: '{balance_strategy}'. Opções: auto, none, class_weight.",
+        )
+
     raw_bytes = await dataset.read()
 
     # Valida tamanho do arquivo
@@ -70,6 +84,8 @@ async def analyze(
         filename=filename,
         prompt=prompt,
         problem_type_hint=problem_type,
+        random_state=random_state,
+        balance_strategy=balance_strategy,
     )
 
     graph = build_graph()

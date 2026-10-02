@@ -27,6 +27,7 @@ import pandas as pd
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from agents.agent3_features import apply_feature_op
 from core.llm import get_llm
 from core.state import AgenticMLState
 
@@ -305,6 +306,13 @@ def _apply_transformations(df: pd.DataFrame, fitted_params: dict) -> pd.DataFram
         if col in df.columns:
             df[[col]] = imputer.transform(df[[col]])
 
+    # Criação de features — mesma receita e mesma ordem do Agente 3 (depois da imputação,
+    # antes do encoding/scaling), via apply_feature_op compartilhado com agent3_features.
+    for spec in fitted_params.get("feature_creation", []):
+        c1, c2 = spec["column_1"], spec["column_2"]
+        if c1 in df.columns and c2 in df.columns:
+            df[spec["new_column"]] = apply_feature_op(df[c1], df[c2], spec["operation"])
+
     # Label Encoding de features (alta cardinalidade)
     for col, le in fitted_params.get("label_encoders", {}).items():
         if col in df.columns:
@@ -399,6 +407,13 @@ def _build_explain_message(
     cands_str = "; ".join(f"{c['model']}={c['score']:.4f}" for c in candidates)
     training_just = training.get("justification", "")
 
+    balancing = training.get("balancing") or {}
+    balancing_str = (
+        f"{balancing.get('method')} — {balancing.get('reason')}"
+        if balancing.get("applied")
+        else "nenhum (classes suficientemente equilibradas ou desativado)"
+    )
+
     feats_str = (
         "; ".join(f"{f['feature']}={f['importance']:.4f}" for f in importances[:5])
         or "não disponível (SVM sem kernel linear)"
@@ -426,6 +441,7 @@ def _build_explain_message(
         f"[Agente 5 — Treinamento] Modelo selecionado: {model}\n"
         f"Métrica de seleção: {metric}={metric_val}{rmse_line}\n"
         f"Todos os candidatos avaliados: {cands_str}\n"
+        f"Tratamento de desbalanceamento de classes: {balancing_str}\n"
         f"Justificativa de seleção: {training_just}\n\n"
         f"Top features por importância: {feats_str}\n\n"
         f"Previsões: {preds_info}\n\n"
@@ -483,13 +499,21 @@ def _fallback_explain(
 
     rmse_part = f" RMSE={training['rmse']:.4f}." if "rmse" in training else ""
 
+    balancing = training.get("balancing") or {}
+    balancing_part = (
+        f" Desbalanceamento de classes tratado via {balancing.get('method')} "
+        f"({balancing.get('reason')})."
+        if balancing.get("applied")
+        else ""
+    )
+
     technical = (
         f"Pipeline AgenticML concluído. "
         f"Dataset: {shape[0]:,} linhas × {shape[1]} colunas. "
         f"Tipo de problema identificado: {problem_type}. "
         f"Diagnóstico de qualidade (Agente 2): {n_issues} issue(s). "
         f"Feature Engineering (Agente 3): {n_transforms} transformação(ões) aplicada(s). "
-        f"Modelo selecionado (Agente 5): {model_selected} com {metric_used}={metric_value}.{rmse_part} "
+        f"Modelo selecionado (Agente 5): {model_selected} com {metric_used}={metric_value}.{rmse_part}{balancing_part} "
         f"Candidatos avaliados: {cands_str}. "
         f"Top features: {feats_str}."
     )

@@ -1,0 +1,31 @@
+dataset,system,seed,metric_name,metric,rmse,model,elapsed,cv_score,optimism_gap,balancing
+Iris,AgenticML,0,f1_weighted,1.0,,Logistic Regression,17.08,0.9747,-0.0253,nenhum
+Iris,AgenticML,1,f1_weighted,0.9332,,XGBoost,16.34,0.9582,0.025,nenhum
+Iris,AgenticML,2,f1_weighted,1.0,,SVM,14.93,0.9833,-0.0167,nenhum
+Iris,AgenticML,3,f1_weighted,0.8667,,Logistic Regression,14.59,0.9749,0.1082,nenhum
+Iris,AgenticML,4,f1_weighted,0.9327,,SVM,20.61,0.9747,0.042,nenhum
+Iris,AgenticML,5,f1_weighted,0.9666,,SVM,13.35,0.9833,0.0167,nenhum
+Iris,AgenticML,6,f1_weighted,0.9666,,SVM,13.39,0.975,0.0084,nenhum
+Iris,AgenticML,7,f1_weighted,1.0,,Logistic Regression,13.86,0.9749,-0.0251,nenhum
+Iris,AgenticML,8,f1_weighted,0.9666,,Logistic Regression,14.06,0.9833,0.0167,nenhum
+Iris,AgenticML,9,f1_weighted,0.9666,,SVM,20.34,0.9666,0.0,nenhum
+Titanic,AgenticML,0,f1_weighted,0.8128,,SVM,20.96,0.8322,0.0194,nenhum
+Titanic,AgenticML,1,f1_weighted,0.8302,,XGBoost,50.28,0.8215,-0.0087,nenhum
+Titanic,AgenticML,2,f1_weighted,0.8516,,XGBoost,63.72,0.8217,-0.0299,nenhum
+Titanic,AgenticML,3,f1_weighted,0.8659,,Random Forest,22.73,0.8199,-0.046,nenhum
+Titanic,AgenticML,4,f1_weighted,0.8402,,Random Forest,17.52,0.8206,-0.0196,nenhum
+Titanic,AgenticML,5,f1_weighted,0.8068,,XGBoost,20.1,0.8287,0.0219,nenhum
+Titanic,AgenticML,6,f1_weighted,0.793,,XGBoost,20.84,0.8344,0.0414,nenhum
+Titanic,AgenticML,7,f1_weighted,0.8007,,Random Forest,19.26,0.8296,0.0289,nenhum
+Titanic,AgenticML,8,f1_weighted,0.869,,XGBoost,17.24,0.8239,-0.0451,nenhum
+Titanic,AgenticML,9,f1_weighted,0.8348,,XGBoost,21.73,0.826,-0.0088,nenhum
+California Housing,AgenticML,0,r2,0.7998,0.5171,XGBoost,18.78,0.7132,-0.0866,nenhum
+California Housing,AgenticML,1,r2,0.7717,0.5602,XGBoost,16.2,0.7257,-0.046,nenhum
+California Housing,AgenticML,2,r2,0.7374,0.5934,XGBoost,16.72,0.7275,-0.0099,nenhum
+California Housing,AgenticML,3,r2,0.7352,0.5993,XGBoost,16.31,0.731,-0.0042,nenhum
+California Housing,AgenticML,4,r2,0.7691,0.5473,XGBoost,14.83,0.7162,-0.0529,nenhum
+California Housing,AgenticML,5,r2,0.7628,0.5759,XGBoost,14.62,0.7251,-0.0377,nenhum
+California Housing,AgenticML,6,r2,0.7422,0.5881,XGBoost,15.95,0.7259,-0.0163,nenhum
+California Housing,AgenticML,7,r2,0.7182,0.6242,XGBoost,13.93,0.7376,0.0194,nenhum
+California Housing,AgenticML,8,r2,0.7791,0.5437,XGBoost,15.78,0.7281,-0.051,nenhum
+California Housing,AgenticML,9,r2,0.7389,0.5952,XGBoost,18.44,0.7329,-0.006,nenhum

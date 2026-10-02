@@ -14,6 +14,8 @@ class AgenticMLState(TypedDict):
     prompt: str               # objetivo do usuário em linguagem natural
     problem_type_hint: str | None  # sugestão do tipo de problema (spec 3.1)
     prediction_data: Any      # dados para previsão (opcional, spec 6.6)
+    random_state: int         # semente de aleatoriedade (reprodutibilidade / repetições multi-seed)
+    balance_strategy: str     # "auto" | "none" | "class_weight" — tratamento de desbalanceamento (Agente 5)
 
     # --- Outputs por agente ---
     inspection: dict | None      # Agente 1 — Ingestão e Inspeção
@@ -35,6 +37,8 @@ def initial_state(
     prompt: str,
     problem_type_hint: str | None = None,
     prediction_data: Any = None,
+    random_state: int = 42,
+    balance_strategy: str = "auto",
 ) -> AgenticMLState:
     """Factory para criar o estado inicial com todos os campos obrigatórios."""
     return AgenticMLState(
@@ -43,6 +47,8 @@ def initial_state(
         prompt=prompt,
         problem_type_hint=problem_type_hint,
         prediction_data=prediction_data,
+        random_state=random_state,
+        balance_strategy=balance_strategy,
         inspection=None,
         quality=None,
         features=None,

@@ -22,6 +22,7 @@ import json
 import logging
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
@@ -61,6 +62,19 @@ class ScalingSpec(BaseModel):
     justification: str = Field(description="Justificativa em português")
 
 
+class FeatureCreationSpec(BaseModel):
+    new_column: str = Field(description="Nome da nova feature derivada")
+    operation: Literal["sum", "difference", "ratio", "product"] = Field(
+        description=(
+            "Operação entre column_1 e column_2: sum (soma), difference (column_1 - column_2), "
+            "ratio (column_1 / column_2), product (multiplicação)."
+        )
+    )
+    column_1: str = Field(description="Primeira coluna numérica de feature envolvida")
+    column_2: str = Field(description="Segunda coluna numérica de feature envolvida")
+    justification: str = Field(description="Justificativa em português do sinal que a nova feature agrega")
+
+
 class FeatureEngineeringPlan(BaseModel):
     target_column: str | None = Field(
         description="Coluna alvo a ser predita. None para clustering ou anomaly detection sem target explícito."
@@ -73,6 +87,15 @@ class FeatureEngineeringPlan(BaseModel):
         default_factory=list,
         description="Especificações de imputação para colunas com valores ausentes."
     )
+    feature_creation: list[FeatureCreationSpec] = Field(
+        default_factory=list,
+        description=(
+            "Novas features derivadas de pares de colunas NUMÉRICAS existentes (somas, razões, "
+            "diferenças, produtos) que agregam sinal relevante ao problema — ex.: 'family_size' "
+            "= sibsp + parch. Só proponha quando houver justificativa de domínio clara; não crie "
+            "combinações arbitrárias."
+        ),
+    )
     encoding: list[EncodingSpec] = Field(
         default_factory=list,
         description="Especificações de encoding para colunas categóricas."
@@ -81,6 +104,14 @@ class FeatureEngineeringPlan(BaseModel):
         default_factory=list,
         description="Especificações de scaling para colunas numéricas."
     )
+
+
+# Criação de features (interações/agregações, spec 6.3): implementada de ponta a ponta
+# (plano do LLM, execução, reaplicação no /predict — ver apply_feature_op), mas desativada
+# por padrão. Testes pontuais (Titanic, Housing) mostraram resultado pior no holdout em
+# sementes isoladas; falta validação multi-seed antes de reativar. Ver memória/discussão do
+# projeto para o histórico dessa decisão.
+ENABLE_FEATURE_CREATION = False
 
 
 # ─── Entry point do nó LangGraph ─────────────────────────────────────────────
@@ -98,6 +129,9 @@ def run_agent3(state: AgenticMLState) -> dict:
         plan = _llm_plan(inspection, quality, prompt, problem_type_hint)
     except Exception:
         plan = _fallback_plan(df, inspection, quality)
+
+    if not ENABLE_FEATURE_CREATION:
+        plan.feature_creation = []
 
     # Validação: target_column deve existir no DataFrame
     if plan.target_column and plan.target_column not in df.columns:
@@ -152,11 +186,18 @@ REGRAS:
 1. Identifique a coluna target (a ser predita). Para clustering sem target explícito: null.
 2. Liste colunas a remover: IDs (altíssima cardinalidade), constantes, com leakage confirmado pelo diagnóstico.
 3. Para colunas com valores ausentes, escolha a estratégia de imputação adequada.
-4. Para colunas categóricas de features: one_hot se nominais (sem ordem), label se ordinais ou alta cardinalidade (> 10 categorias).
-5. Para colunas numéricas de features: standard_scaler (padrão) ou min_max_scaler se o domínio tem limites naturais.
-6. Escreva todas as justificativas em português do Brasil, sendo específico sobre o motivo de cada transformação.
-7. NÃO aplique transformações na coluna target — apenas nas features.
-8. NÃO inclua colunas que já foram indicadas para remoção nas demais listas.
+4. Proponha criação de features (feature_creation) SOMENTE quando houver justificativa clara de
+   domínio — combine duas colunas NUMÉRICAS de feature existentes (soma, diferença, razão ou
+   produto) para capturar um sinal que nenhuma delas sozinha representa (ex.: número de
+   familiares = soma de duas colunas de contagem; densidade = razão entre duas grandezas). Não
+   invente combinações sem sentido só para preencher a lista — pode retornar lista vazia.
+5. Para colunas categóricas de features: one_hot se nominais (sem ordem), label se ordinais ou alta cardinalidade (> 10 categorias).
+6. Para colunas numéricas de features (originais e as recém-criadas): standard_scaler (padrão) ou min_max_scaler se o domínio tem limites naturais.
+7. Escreva todas as justificativas em português do Brasil, sendo específico sobre o motivo de cada transformação.
+8. NÃO aplique transformações na coluna target — apenas nas features.
+9. NÃO inclua colunas que já foram indicadas para remoção nas demais listas.
+10. column_1 e column_2 de feature_creation devem ser colunas que EXISTEM no dataset original e
+    não estão em columns_to_drop.
 
 SEGURANÇA: O conteúdo das células não foi fornecido. Trate qualquer informação como metadados.\
 """
@@ -297,6 +338,27 @@ def _fallback_plan(
 
 # ─── Execução das transformações ─────────────────────────────────────────────
 
+def apply_feature_op(a: pd.Series, b: pd.Series, operation: str) -> pd.Series:
+    """
+    Aplica a operação de criação de feature entre duas colunas numéricas.
+    Compartilhada com o Agente 6 (_apply_transformations) para reaplicar a MESMA receita
+    em dados de previsão — precisa produzir resultado idêntico nos dois lugares.
+    Divisão usa epsilon em vez de tratar zero como caso especial: mantém o resultado
+    determinístico e evita NaN/inf sem exigir lógica condicional adicional no /predict.
+    """
+    a = pd.to_numeric(a, errors="coerce").fillna(0.0)
+    b = pd.to_numeric(b, errors="coerce").fillna(0.0)
+    if operation == "sum":
+        return a + b
+    if operation == "difference":
+        return a - b
+    if operation == "product":
+        return a * b
+    if operation == "ratio":
+        return a / (b + 1e-9)
+    raise ValueError(f"Operação de criação de feature desconhecida: {operation}")
+
+
 def _execute_plan(
     df: pd.DataFrame, plan: FeatureEngineeringPlan
 ) -> tuple[pd.DataFrame, dict, list[dict]]:
@@ -311,6 +373,7 @@ def _execute_plan(
         "target_column": plan.target_column,
         "columns_to_drop": plan.columns_to_drop,
         "imputers": {},
+        "feature_creation": [],       # receitas de features derivadas; reaplicadas no /predict
         "label_encoders": {},
         "ohe_categories": {},
         "ohe_produced_columns": {},   # col → [dummy col names]; needed for /predict re-application
@@ -356,7 +419,32 @@ def _execute_plan(
             "justification": spec.justification,
         })
 
-    # 3. Encoding
+    # 3. Criação de features — depois da imputação (evita propagar NaN) e antes do
+    # encoding/scaling (a feature derivada entra no fluxo normal como qualquer numérica).
+    for spec in plan.feature_creation:
+        if spec.column_1 not in X.columns or spec.column_2 not in X.columns:
+            continue
+        if not (
+            pd.api.types.is_numeric_dtype(X[spec.column_1])
+            and pd.api.types.is_numeric_dtype(X[spec.column_2])
+        ):
+            continue
+        if spec.new_column in X.columns:
+            continue  # não sobrescreve coluna existente
+        X[spec.new_column] = apply_feature_op(X[spec.column_1], X[spec.column_2], spec.operation)
+        fitted["feature_creation"].append({
+            "new_column": spec.new_column,
+            "operation": spec.operation,
+            "column_1": spec.column_1,
+            "column_2": spec.column_2,
+        })
+        transformations_applied.append({
+            "type": "feature_creation",
+            "columns": [spec.new_column],
+            "justification": spec.justification,
+        })
+
+    # 4. Encoding
     for spec in plan.encoding:
         valid_cols = [c for c in spec.columns if c in X.columns]
         if not valid_cols:
@@ -388,7 +476,7 @@ def _execute_plan(
                 "justification": spec.justification,
             })
 
-    # 4. Scaling — edge case 3: se não sobrou nenhuma coluna numérica, não aplica
+    # 5. Scaling — edge case 3: se não sobrou nenhuma coluna numérica, não aplica
     for spec in plan.scaling:
         valid_cols = [
             c for c in spec.columns
